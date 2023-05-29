@@ -1,4 +1,0 @@
-[ZoneTransfer]
-ZoneId=3
-ReferrerUrl=https://github.com/Benson-Genomics-Lab/TRF/releases/tag/v4.09.1
-HostUrl=https://objects.githubusercontent.com/github-production-release-asset-2e65be/253959277/08d4c580-b9e6-11ea-96c1-2c1b402554d5?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIWNJYAX4CSVEH53A%2F20230527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20230527T140037Z&X-Amz-Expires=300&X-Amz-Signature=c043ea4ae7b0c675324b5633a176d7cb2be227ac0e43b3ddbd3708a2163ea87a&X-Amz-SignedHeaders=host&actor_id=50640978&key_id=0&repo_id=253959277&response-content-disposition=attachment%3B%20filename%3Dtrf409.linux64&response-content-type=application%2Foctet-stream

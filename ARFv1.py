@@ -55,10 +55,12 @@ def extract_repeat_sequences(trf_output_file, output_file):
         print("No repeat sequences with a length between 150 and 200 bp were found.")
     else:
         with open(output_file, 'w') as consensus:
+            rep_number = 0
             for seq_id, sequence in repeat_sequences:
                 consensus.write(f'>{seq_id}\n{sequence}\n')
+                rep_number += 1
 
-        print("Repeat sequences with a length between 150 and 200 bp were saved to the consensus file.")
+        print("Total number of sequences with a length between 150 and 200 bp saved to the consensus file:", str(rep_number))
 
 
 def create_blast_db(fasta_file, db_name):

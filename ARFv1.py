@@ -143,3 +143,20 @@ run_blast(output_file, db_name, blast_output_file)
 # Save alignment results as a multi-FASTA file
 output_filename = f"variants_{fasta_filename}"
 save_alignment_results_as_fasta(blast_output_file, output_filename)
+
+# Remove intermediate files
+os.remove(f'{fasta_file}.2.7.7.80.10.50.500.dat')
+os.remove(trf_output_file)
+os.remove(output_file)
+os.remove(blast_output_file)
+os.remove(f"{db_name}.nhr")
+os.remove(f"{db_name}.nin")
+os.remove(f"{db_name}.nsq")
+os.remove(f"{db_name}.ndb")
+os.remove(f"{db_name}.nog")
+os.remove(f"{db_name}.nos")
+os.remove(f"{db_name}.not")
+os.remove(f"{db_name}.ntf")
+os.remove(f"{db_name}.nto")
+
+print("Intermediate files and BLAST database removed.")

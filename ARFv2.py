@@ -333,8 +333,8 @@ def process_fasta_files(input_dir, target_sequence):
         count = 0
         for i, (sequence_str, sequences) in enumerate(unique_sequences.items()):
             count += len(sequences)
-            original_header = sequences[0][1].split("|")[-1].strip()
-            header = f"Unique_{i} | Count: {len(sequences)} | Original Header: {original_header} | New length: {len(sequence_str)}"
+            original_headers = [seq.description.split("|")[0].strip().lstrip(">/").split("/")[-1] for seq, _ in sequences]
+            header = f"Unique_{i} | Count: {len(sequences)} | Hits: {' | '.join(original_headers)}"
             file.write(f">{header}\n{sequence_str}\n")
         print(f"Number of unique sequences: {count}")
         print(f"Unique sequences saved in: {unique_output_file}")

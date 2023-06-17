@@ -14,7 +14,7 @@ def run_trf(fasta_file, trf_path, output_file):
         tr_number = 0
         seq_id = []
         a = [str(line) for line in fasta]
-
+     
         for lin in a:
             # identification of start of the sequence
             # name of the sequence
@@ -175,7 +175,7 @@ def search_and_reorganize_sequences(variant_output_filename, target_sequence, ou
 
 def process_fasta_files(input_dir, target_sequence):
     # Create output directory based on the target sequence name
-    output_dir = target_sequence.replace(" ", "_") + "_output"
+    output_dir = os.path.join(os.path.dirname(target_sequence), os.path.basename(target_sequence).split('.')[0] + "_output")
     os.makedirs(output_dir, exist_ok=True)
     ascii_art = r'''
       ____ __ __ ______  ___  ___ ___  ____ ______ ____   __      ____    ___ ____   ___  ____ ______      _____ ____ ____  ___     ___ ____  
@@ -208,7 +208,7 @@ def process_fasta_files(input_dir, target_sequence):
         print(f"Sequence length: {sequence_length} bases")
 
         # Run TRF and process the results
-        trf_output_file = os.path.join(output_dir, f'output_{fasta_filename}.fasta')
+        trf_output_file = f'output_{fasta_filename}.fasta'
         run_trf(fasta_file, '/usr/local/bin/trf', trf_output_file)
 
         # Extract and save repeat sequences
@@ -220,7 +220,7 @@ def process_fasta_files(input_dir, target_sequence):
         create_blast_db(fasta_file, db_name)
 
         # Run BLAST search
-        blast_output_file = os.path.join(output_dir, f'alignment_results_{fasta_filename}.txt')
+        blast_output_file = os.path.join(input_dir, f'alignment_results_{fasta_filename}.txt')
         run_blast(output_file, db_name, blast_output_file)
 
         # Save alignment results as a multi-FASTA file

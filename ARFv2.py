@@ -1,11 +1,12 @@
 import os
 import sys
 import re
+import subprocess
 from Bio import SeqIO
 
 def run_trf(fasta_file, trf_path, output_file):
-    cmd = f'{trf_path} {fasta_file} 2 7 7 80 10 50 500 -f -h > /dev/null 2>&1'
-    os.system(cmd)
+    cmd = [trf_path, fasta_file, '2', '7', '7', '80', '10', '50', '500', '-f', '-h']
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     name_for_trf = f'{fasta_file}.2.7.7.80.10.50.500.dat'
 

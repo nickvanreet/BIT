@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import glob
 import subprocess
 from Bio import SeqIO
 
@@ -172,6 +173,25 @@ def search_and_reorganize_sequences(variant_output_filename, target_sequence, ou
     print(f'Total number of variants reconstructed: {reconstructed_count}')
     print(f'Total number of variants not found: {not_found_count}')
 
+def create_multifasta(directory, output_file, file_prefix):
+    fasta_files = [file for file in os.listdir(directory) if file.startswith(file_prefix) and file.endswith('.fasta')]
+
+    if not fasta_files:
+        print(f"No {file_prefix} FASTA files found in directory {directory}.")
+        return
+
+    with open(output_file, 'a') as outfile:
+        for fasta_file in fasta_files:
+            fasta_path = os.path.join(directory, fasta_file)
+            with open(fasta_path, 'r') as infile:
+                records = SeqIO.parse(infile, 'fasta')
+                SeqIO.write(records, outfile, 'fasta')
+
+            # Remove the individual FASTA file
+            os.remove(fasta_path)
+
+    print(f"{file_prefix.capitalize()} multifasta file created: {output_file}")
+
 
 def process_fasta_files(input_dir, target_sequence):
     # Create output directory based on the target sequence name
@@ -248,8 +268,25 @@ def process_fasta_files(input_dir, target_sequence):
 
         print("\n")
 
+        
+
     print("Processing of FASTA files in the directory is complete.\nOutput is saved in:", input_dir, output_dir)
    
+# Create the multifasta file for consensus files and remove individual FASTA files
+    output_consensus_file = os.path.join(output_dir, f'consensus_multi_{target_sequence}.fasta')
+    create_multifasta(output_dir, output_consensus_file, 'consensus_')
+
+# Create the multifasta file for variant files and remove individual FASTA files
+    output_variant_file = os.path.join(output_dir, f'variant_multi_{target_sequence}.fasta')
+    create_multifasta(output_dir, output_variant_file, 'variants_')
+
+# Create the multifasta file for reorganized files and remove individual FASTA files
+    output_reorganized_file = os.path.join(output_dir, f'reorganized_multi_{target_sequence}.fasta')
+    create_multifasta(output_dir, output_reorganized_file, 'reorganized')
+
+# Create the multifasta file for sequences not found files and remove individual FASTA files
+    output_sequences_not_found_file = os.path.join(output_dir, f'sequences_not_found_multi_{target_sequence}.fasta')
+    create_multifasta(output_dir, output_sequences_not_found_file, 'sequences_not_found')
 
 # Check if the input directory argument is provided
 if len(sys.argv) < 3:

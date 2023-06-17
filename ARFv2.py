@@ -177,21 +177,35 @@ def create_multifasta(directory, output_file, file_prefix):
     fasta_files = [file for file in os.listdir(directory) if file.startswith(file_prefix) and file.endswith('.fasta')]
 
     if not fasta_files:
-        print(f"No {file_prefix} FASTA files found in directory {directory}.")
+        print(f"No consensus FASTA files found in directory {directory}.")
         return
 
-    with open(output_file, 'a') as outfile:
+    count = 0  # Initialize the count variable
+
+    with open(output_file, 'w') as outfile:
+        all_records = []  # List to store all the records
+
         for fasta_file in fasta_files:
             fasta_path = os.path.join(directory, fasta_file)
             with open(fasta_path, 'r') as infile:
-                records = SeqIO.parse(infile, 'fasta')
+                records = list(SeqIO.parse(infile, 'fasta'))  # Store the records in a list
                 SeqIO.write(records, outfile, 'fasta')
+
+                # Increment the count by the number of records in the current file
+                count += len(records)
 
             # Remove the individual FASTA file
             os.remove(fasta_path)
 
+            # Add the records to the list of all records
+            all_records.extend(records)
+    
+    file_count = len(fasta_files)       
     print(f"{file_prefix.capitalize()} multifasta file created: {output_file}")
+    print(f"Number of {file_prefix} files saved: {file_count}")
+    print(f"Total number of FASTA headers in {file_prefix}: {count}")
 
+    return file_count
 
 def process_fasta_files(input_dir, target_sequence):
     # Create output directory based on the target sequence name
@@ -272,21 +286,67 @@ def process_fasta_files(input_dir, target_sequence):
 
     print("Processing of FASTA files in the directory is complete.\nOutput is saved in:", input_dir, output_dir)
    
-# Create the multifasta file for consensus files and remove individual FASTA files
-    output_consensus_file = os.path.join(output_dir, f'consensus_multi_{target_sequence}.fasta')
-    create_multifasta(output_dir, output_consensus_file, 'consensus_')
+# Initialize the total file count
+    total_file_count = 0
 
+# Create the multifasta file for consensus files and remove individual FASTA files
+    output_consensus_file = os.path.join(output_dir, f'consens_multi_{target_sequence}.fasta')
+    consensus_file_count = create_multifasta(output_dir, output_consensus_file, 'consensus_')
+    total_file_count += consensus_file_count
+    
 # Create the multifasta file for variant files and remove individual FASTA files
     output_variant_file = os.path.join(output_dir, f'variant_multi_{target_sequence}.fasta')
-    create_multifasta(output_dir, output_variant_file, 'variants_')
+    variant_file_count = create_multifasta(output_dir, output_variant_file, 'variants_')
+    total_file_count += variant_file_count
 
 # Create the multifasta file for reorganized files and remove individual FASTA files
-    output_reorganized_file = os.path.join(output_dir, f'reorganized_multi_{target_sequence}.fasta')
-    create_multifasta(output_dir, output_reorganized_file, 'reorganized')
+    output_reorganized_file = os.path.join(output_dir, f'reorg_multi_{target_sequence}.fasta')
+    reorganized_file_count = create_multifasta(output_dir, output_reorganized_file, 'reorganized')
+    total_file_count += reorganized_file_count
 
 # Create the multifasta file for sequences not found files and remove individual FASTA files
-    output_sequences_not_found_file = os.path.join(output_dir, f'sequences_not_found_multi_{target_sequence}.fasta')
-    create_multifasta(output_dir, output_sequences_not_found_file, 'sequences_not_found')
+    output_sequences_not_found_file = os.path.join(output_dir, f'not_found_multi_{target_sequence}.fasta')
+    sequences_not_found_file_count = create_multifasta(output_dir, output_sequences_not_found_file, 'sequences_not_found')
+    total_file_count += sequences_not_found_file_count
+
+    print(f"Total number of files saved: {total_file_count}")
+
+    # Creat a multifasta file for unique and non-unique sequences
+    unique_sequences = set()
+    non_unique_sequences = []
+
+    # Read sequences from the file
+    with open(output_reorganized_file, "r") as file:
+        sequences = SeqIO.parse(file, "fasta")
+
+        # Iterate through each sequence
+        for sequence in sequences:
+            # Check if the sequence is unique
+            if str(sequence.seq) not in unique_sequences:
+                unique_sequences.add(str(sequence.seq))
+            else:
+                non_unique_sequences.append(sequence)
+
+    # Write unique sequences to a multifasta file and count the number of sequences
+    unique_output_file = os.path.join(output_dir,f"unique_sequences_{target_sequence}.fasta")
+    with open(unique_output_file, "w") as file:
+        count = 0
+        for i, sequence in enumerate(unique_sequences):
+            count += 1
+            file.write(f">Unique_{i}\n{sequence}\n")
+        print(f"Number of unique sequences: {count}")
+        print(f"Unique sequences saved in: {unique_output_file}")
+
+    # Write non-unique sequences to a multifasta file and count the number of sequences
+    non_unique_output_file = os.path.join(output_dir,f"non_unique_sequences_{target_sequence}.fasta")
+    with open(non_unique_output_file, "w") as file:
+        count = 0
+        for i, sequence in enumerate(non_unique_sequences):
+            count += 1
+            file.write(f">{sequence.id}\n{sequence.seq}\n")
+        print(f"Number of non-unique sequences: {count}")
+        print(f"Non-unique sequences saved in: {non_unique_output_file}")
+
 
 # Check if the input directory argument is provided
 if len(sys.argv) < 3:

@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-import glob
+from collections import defaultdict
 import subprocess
 from Bio import SeqIO
 
@@ -309,10 +309,8 @@ def process_fasta_files(input_dir, target_sequence):
     sequences_not_found_file_count = create_multifasta(output_dir, output_sequences_not_found_file, 'sequences_not_found')
     total_file_count += sequences_not_found_file_count
 
-    print(f"Total number of files saved: {total_file_count}")
-
-    # Creat a multifasta file for unique and non-unique sequences
-    unique_sequences = set()
+    # Create a multifasta file for unique and non-unique sequences
+    unique_sequences = defaultdict(list)
     non_unique_sequences = []
 
     # Read sequences from the file
@@ -322,28 +320,33 @@ def process_fasta_files(input_dir, target_sequence):
         # Iterate through each sequence
         for sequence in sequences:
             # Check if the sequence is unique
-            if str(sequence.seq) not in unique_sequences:
-                unique_sequences.add(str(sequence.seq))
+            sequence_str = str(sequence.seq)
+            if sequence_str not in unique_sequences:
+                unique_sequences[sequence_str] = [(sequence, sequence.description)]
             else:
+                unique_sequences[sequence_str].append((sequence, sequence.description))
                 non_unique_sequences.append(sequence)
 
     # Write unique sequences to a multifasta file and count the number of sequences
-    unique_output_file = os.path.join(output_dir,f"unique_sequences_{target_sequence}.fasta")
+    unique_output_file = os.path.join(output_dir, f"unique_sequences_{target_sequence}.fasta")
     with open(unique_output_file, "w") as file:
         count = 0
-        for i, sequence in enumerate(unique_sequences):
-            count += 1
-            file.write(f">Unique_{i}\n{sequence}\n")
+        for i, (sequence_str, sequences) in enumerate(unique_sequences.items()):
+            count += len(sequences)
+            original_header = sequences[0][1].split("|")[-1].strip()
+            header = f"Unique_{i} | Count: {len(sequences)} | Original Header: {original_header} | New length: {len(sequence_str)}"
+            file.write(f">{header}\n{sequence_str}\n")
         print(f"Number of unique sequences: {count}")
         print(f"Unique sequences saved in: {unique_output_file}")
 
     # Write non-unique sequences to a multifasta file and count the number of sequences
-    non_unique_output_file = os.path.join(output_dir,f"non_unique_sequences_{target_sequence}.fasta")
+    non_unique_output_file = os.path.join(output_dir, f"non_unique_sequences_{target_sequence}.fasta")
     with open(non_unique_output_file, "w") as file:
         count = 0
         for i, sequence in enumerate(non_unique_sequences):
             count += 1
-            file.write(f">{sequence.id}\n{sequence.seq}\n")
+            header = f"{target_sequence} | Length: {len(sequence.seq)}"
+            file.write(f">{header}\n{sequence.seq}\n")
         print(f"Number of non-unique sequences: {count}")
         print(f"Non-unique sequences saved in: {non_unique_output_file}")
 

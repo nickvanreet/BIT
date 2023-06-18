@@ -5,12 +5,10 @@ from collections import defaultdict
 import subprocess
 from Bio import SeqIO
 
-def run_trf(fasta_file, trf_path, output_file):
+def run_trf(fasta_file, trf_path, name_for_trf, output_file):
     cmd = [trf_path, fasta_file, '2', '7', '7', '80', '10', '50', '500', '-f', '-h']
     subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    name_for_trf = f'{fasta_file}.2.7.7.80.10.50.500.dat'
-
+    
     with open(name_for_trf) as fasta, open(output_file, 'a') as out:
         tr_number = 0
         seq_id = []
@@ -285,8 +283,9 @@ def process_fasta_files(input_dir, target_sequence):
                 print(f"Sequence is ready to go as {fasta_file}")
 
         # Run TRF and process the results
+        name_for_trf = f'{fasta_file}.2.7.7.80.10.50.500.dat'
         trf_output_file = f'output_{fasta_filename}.fasta'
-        run_trf(fasta_file, '/usr/local/bin/trf', trf_output_file)
+        run_trf(fasta_file, '/usr/local/bin/trf', name_for_trf, trf_output_file)
 
         # Extract and save repeat sequences
         output_file = os.path.join(output_dir, f'consensus_{fasta_filename}')

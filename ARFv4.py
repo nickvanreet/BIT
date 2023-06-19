@@ -7,14 +7,14 @@ from collections import defaultdict
 
 from Bio import SeqIO
 
-def run_trf(fasta_file, trf_path, name_for_trf, output_file):
-    trf_output_file = f'{output_file}.2.7.7.80.10.50.500.dat'
+def run_trf(fasta_file, trf_path, name_for_trf, trf_output_file):
+    name_for_trf = f'{fasta_file}.2.7.7.80.10.50.500.dat'
     cmd = [trf_path, fasta_file, '2', '7', '7', '80', '10', '50', '500', '-f', '-h']
     subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     counts = {'<50': 0, '50-100': 0, '100-250': 0, '250-500': 0, '>500': 0}
 
-    with open(name_for_trf, 'r') as fasta, open(output_file, 'a') as out:
+    with open(name_for_trf, 'r') as fasta, open(trf_output_file, 'a') as out:
         tr_number = 0
         seq_id = None
         seq_seq = ''
@@ -48,7 +48,7 @@ def run_trf(fasta_file, trf_path, name_for_trf, output_file):
     print('\nTotal number of repeats found by TRF:', str(tr_number))
     return tr_number, counts
 
-def extract_repeat_sequences(trf_output_file, output_file):
+def extract_repeat_sequences(trf_output_file, output_file_consensus):
     repeat_sequences = []
 
     with open(trf_output_file) as trf_file:
@@ -70,7 +70,7 @@ def extract_repeat_sequences(trf_output_file, output_file):
         return
 
     else:
-        with open(output_file, 'w') as consensus:
+        with open(output_file_consensus, 'w') as consensus:
             rep_number = 0
             for seq_id, sequence in repeat_sequences:
                 consensus.write(f'>{seq_id}\n{sequence}\n')
@@ -82,8 +82,8 @@ def create_blast_db(fasta_file, db_name):
     cmd = f'makeblastdb -in {fasta_file} -dbtype nucl -parse_seqids -out {db_name}'
     subprocess.run(cmd, shell=True)
 
-def run_blast(query_file, db_name, output_file):
-    cmd = f'blastn -query {query_file} -db {db_name} -out {output_file} -outfmt "7 qstart qend sstart send qseq sseq"'
+def run_blast(query_file, db_name, output_file_consensus):
+    cmd = f'blastn -query {query_file} -db {db_name} -out {output_file_consensus} -outfmt "7 qstart qend sstart send qseq sseq"'
     subprocess.run(cmd, shell=True)
 
 def extract_hits_from_alignment_results(alignment_file):
@@ -166,14 +166,14 @@ def process_fasta_files(input_dir, trf_path, blast_db_dir, min_sequence_length=2
 
         else:
             name_for_trf = f'{filename}.2.7.7.80.10.50.500.dat'
-            output_file = os.path.join(input_dir, name_for_trf)
-            tr_number, counts = run_trf(fasta_file, trf_path, name_for_trf, output_file)
+            trf_output_file = os.path.join(input_dir, f'output_{filename}.fasta')
+            tr_number, counts = run_trf(fasta_file, trf_path, name_for_trf, trf_output_file)
 
             output_file_consensus = os.path.join(input_dir, f'consensus_{filename}')
-            extract_repeat_sequences(output_file, output_file_consensus)
+            extract_repeat_sequences(trf_output_file, output_file_consensus)
 
             db_name = os.path.join(blast_db_dir, filename)
-            create_blast_db(output_file_consensus, db_name)
+            create_blast_db(fasta_file, db_name)
 
             blast_output_file = os.path.join(input_dir, f'alignment_results_{filename}.txt')
             run_blast(output_file_consensus, db_name, blast_output_file)

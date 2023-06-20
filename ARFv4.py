@@ -3,6 +3,7 @@ import os
 import csv
 import re
 import subprocess
+import shutil
 from collections import defaultdict
 
 from Bio import SeqIO
@@ -49,6 +50,8 @@ def run_trf(fasta_file, trf_path, name_for_trf, trf_output_file):
                 counts['>500'] += 1
 
     print('\nTotal number of repeats found by TRF:', str(tr_number))
+    shutil.move(name_for_trf, os.path.dirname(trf_output_file))
+    
     return tr_number, counts, Rn_values
 
 def extract_repeat_sequences(trf_output_file, output_file_consensus):
@@ -80,6 +83,7 @@ def extract_repeat_sequences(trf_output_file, output_file_consensus):
                 rep_number += 1
 
         print("Total number of consensus sequences found:", str(rep_number))
+        return {"rep_number": rep_number, "repeat_sequences": repeat_sequences}
 
 def create_blast_db(fasta_file, db_name):
     cmd = f'makeblastdb -in {fasta_file} -dbtype nucl -parse_seqids -out {db_name}'
@@ -173,14 +177,14 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
         tr_number = 0
 
         if sequence_length < min_sequence_length:
-            print(f"Sequence is shorter than {min_sequence_length} bases. Skipping to the next sequence.")
-            skipped_filename = f"variant_{filename}"
-            skipped_file_path = os.path.join(output_dir, skipped_filename)
-            with open(skipped_file_path, 'w') as skipped_file:
-                skipped_file.write('\n'.join(fasta_data)) # fasta_data contains both header and sequence
+                print(f"Sequence is shorter than {min_sequence_length} bases. Skipping to the next sequence.")
+                skipped_filename = f"variant_{filename}"
+                skipped_file_path = os.path.join(output_dir, skipped_filename)
+                with open(skipped_file_path, 'w') as skipped_file:
+                    skipped_file.write('\n'.join(fasta_data))  # fasta_data contains both header and sequence
 
-            results.append({'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': 'Skipped'})
-            continue
+                results.append({'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': 'Skipped', 'num_variants': 1, 'variant_headers': fasta_data[0]})
+                continue
 
         else:
             name_for_trf = os.path.join(input_dir, f'{filename}.2.7.7.80.10.50.500.dat')
@@ -188,6 +192,17 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
             tr_number, counts, Rn_values = run_trf(fasta_file, trf_path, name_for_trf, trf_output_file)
 
             output_file_consensus = os.path.join(output_dir, f'consensus_{filename}')
+            consensus_data = extract_repeat_sequences(trf_output_file, output_file_consensus)
+            num_consensus_sequences = consensus_data['rep_number']
+
+            if num_consensus_sequences == 0:
+                print(f"No sequences between 150-200 bp found in {filename}. Saving the original sequence as a variant.")
+                variant_output_filename = os.path.join(output_dir, f"variants_{filename}")
+                with open(fasta_file, "r") as original, open(variant_output_filename, "w") as variant:
+                    variant.write(original.read())
+                    results.append({'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': 'None', 'num_variants': 1, 'variant_headers': fasta_data[0]})
+                continue
+            
             extract_repeat_sequences(trf_output_file, output_file_consensus)
 
             db_name = os.path.join(output_dir, filename)
@@ -201,12 +216,12 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
 
             hits, num_sequences = extract_hits_from_alignment_results(blast_output_file)
 
-            result = {'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': tr_number, 'Rn': Rn_values, 'num_sequences': num_sequences, 'num_variants': num_variants, 'variant_headers': ';'.join(variant_headers)}
+            result = {'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': tr_number, 'Rn': Rn_values, 'rep_number': num_consensus_sequences, 'num_sequences': num_sequences, 'num_variants': num_variants, 'variant_headers': ';'.join(variant_headers)}
             result.update(counts)
             results.append(result)
 
     with open(os.path.join(output_dir, 'results.csv'), 'w', newline='') as csvfile:
-        fieldnames = ['fasta_file', 'sequence_length', 'tr_number', '<50', '50-100', '100-250', '250-500', '>500', 'Rn', 'num_sequences','num_variants', 'variant_headers']
+        fieldnames = ['fasta_file', 'sequence_length', 'tr_number', '<50', '50-100', '100-250', '250-500', '>500', 'Rn','rep_number', 'num_sequences','num_variants', 'variant_headers']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
         writer.writeheader()

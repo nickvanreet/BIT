@@ -176,13 +176,13 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
         tr_number = 0
 
         if sequence_length < min_sequence_length:
-            print(f"Sequence is shorter than {min_sequence_length} bases. Skipping to the next sequence.")
+            print(f"Sequence is shorter than {min_sequence_length} bases. Skipping TRF to the next sequence.")
             skipped_filename = f"variant_{filename}"
             skipped_file_path = os.path.join(output_dir, skipped_filename)
             with open(skipped_file_path, 'w') as skipped_file:
                 skipped_file.write('\n'.join(fasta_data)) # fasta_data contains both header and sequence
 
-            results.append({'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': 'Skipped', 'rep_number': 1, 'num_variants': 0})
+            results.append({'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': 0, 'rep_number': 0, 'num_variants': 1})
             continue
 
         else:
@@ -199,7 +199,7 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
                 variant_output_filename = os.path.join(output_dir, f"variants_{filename}")
                 with open(fasta_file, "r") as original, open(variant_output_filename, "w") as variant:
                     variant.write(original.read())
-                    results.append({'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': tr_number, 'rep_number': 1, 'num_variants': 1})
+                    results.append({'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': tr_number, 'rep_number': 0, 'num_variants': 1})
                 continue
             
             extract_repeat_sequences(trf_output_file, output_file_consensus)

@@ -8,13 +8,14 @@ from collections import defaultdict
 from Bio import SeqIO
 
 def run_trf(fasta_file, trf_path, name_for_trf, trf_output_file):
-    name_for_trf = f'{fasta_file}.2.7.7.80.10.50.500.dat'
-    cmd = [trf_path, fasta_file, '2', '7', '7', '80', '10', '50', '500', '-f', '-h']
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    cmd = f'{trf_path} {fasta_file} 2 7 7 80 10 50 500 -d -h'
+    subprocess.run(cmd, shell=True)
 
     counts = {'<50': 0, '50-100': 0, '100-250': 0, '250-500': 0, '>500': 0}
     Rn_values = {}
+    rep_number = 0
 
+    # Modify this line to include the output directory in the TRF output file path
     with open(name_for_trf, 'r') as fasta, open(trf_output_file, 'a') as out:
         tr_number = 0
         seq_id = None
@@ -109,6 +110,7 @@ def extract_hits_from_alignment_results(alignment_file):
 
 def save_alignment_results_as_fasta(alignment_file, variant_output_filename, fasta_filename):
     num_variants = 0
+    variant_headers = []
 
     with open(alignment_file, "r") as blast_file, open(variant_output_filename, "w") as variant_file:
         for line in blast_file:
@@ -121,6 +123,7 @@ def save_alignment_results_as_fasta(alignment_file, variant_output_filename, fas
             subject_sequence = fields[5]
 
             fasta_header = f">{fasta_filename}_{subject_start}_{subject_end}"
+            variant_headers.append(fasta_header)
 
             variant_file.write(fasta_header + "\n")
             variant_file.write(subject_sequence + "\n")
@@ -128,8 +131,10 @@ def save_alignment_results_as_fasta(alignment_file, variant_output_filename, fas
             num_variants += 1
 
     print("Total number of variant files extracted:", num_variants)
+    return variant_headers, num_variants
 
-def process_fasta_files(input_dir, trf_path, blast_db_dir, min_sequence_length=200):
+
+def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200):
     ascii_art = r'''
     
     \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -142,11 +147,17 @@ def process_fasta_files(input_dir, trf_path, blast_db_dir, min_sequence_length=2
     '''
     print(ascii_art)
 
+    # Check if the output directory exists, and if not, create it
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    # process the FASTA files
     fasta_files = [filename for filename in os.listdir(input_dir) if filename.endswith(".fasta")]
     num_files = len(fasta_files)
 
     results = []
     print(f"{num_files} FASTA file(s) detected in {input_dir}.\n")
+    print(f"ARF will save all output to {output_dir}.\n ")
 
     for index, filename in enumerate(fasta_files, start=1):
         fasta_file = os.path.join(input_dir, filename)
@@ -163,34 +174,39 @@ def process_fasta_files(input_dir, trf_path, blast_db_dir, min_sequence_length=2
 
         if sequence_length < min_sequence_length:
             print(f"Sequence is shorter than {min_sequence_length} bases. Skipping to the next sequence.")
+            skipped_filename = f"variant_{filename}"
+            skipped_file_path = os.path.join(output_dir, skipped_filename)
+            with open(skipped_file_path, 'w') as skipped_file:
+                skipped_file.write('\n'.join(fasta_data)) # fasta_data contains both header and sequence
+
             results.append({'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': 'Skipped'})
             continue
 
         else:
-            name_for_trf = f'{filename}.2.7.7.80.10.50.500.dat'
-            trf_output_file = os.path.join(input_dir, f'output_{filename}.fasta')
+            name_for_trf = os.path.join(input_dir, f'{filename}.2.7.7.80.10.50.500.dat')
+            trf_output_file = os.path.join(output_dir, f'output_{filename}.fasta')
             tr_number, counts, Rn_values = run_trf(fasta_file, trf_path, name_for_trf, trf_output_file)
 
-            output_file_consensus = os.path.join(input_dir, f'consensus_{filename}')
+            output_file_consensus = os.path.join(output_dir, f'consensus_{filename}')
             extract_repeat_sequences(trf_output_file, output_file_consensus)
 
-            db_name = os.path.join(blast_db_dir, filename)
+            db_name = os.path.join(output_dir, filename)
             create_blast_db(fasta_file, db_name)
 
-            blast_output_file = os.path.join(input_dir, f'alignment_results_{filename}.txt')
+            blast_output_file = os.path.join(output_dir, f'alignment_results_{filename}.txt')
             run_blast(output_file_consensus, db_name, blast_output_file)
 
-            variant_output_filename = os.path.join(input_dir, f"variants_{filename}")
-            save_alignment_results_as_fasta(blast_output_file, variant_output_filename, filename)
+            variant_output_filename = os.path.join(output_dir, f"variants_{filename}")
+            variant_headers, num_variants = save_alignment_results_as_fasta(blast_output_file, variant_output_filename, filename)
 
             hits, num_sequences = extract_hits_from_alignment_results(blast_output_file)
 
-            result = {'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': tr_number, 'Rn': Rn_values, 'num_sequences': num_sequences}
+            result = {'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': tr_number, 'Rn': Rn_values, 'num_sequences': num_sequences, 'num_variants': num_variants, 'variant_headers': ';'.join(variant_headers)}
             result.update(counts)
             results.append(result)
 
-    with open(os.path.join(input_dir, 'results.csv'), 'w', newline='') as csvfile:
-        fieldnames = ['fasta_file', 'sequence_length', 'tr_number', '<50', '50-100', '100-250', '250-500', '>500', 'Rn', 'num_sequences']
+    with open(os.path.join(output_dir, 'results.csv'), 'w', newline='') as csvfile:
+        fieldnames = ['fasta_file', 'sequence_length', 'tr_number', '<50', '50-100', '100-250', '250-500', '>500', 'Rn', 'num_sequences','num_variants', 'variant_headers']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
         writer.writeheader()
@@ -200,7 +216,7 @@ def process_fasta_files(input_dir, trf_path, blast_db_dir, min_sequence_length=2
 parser = argparse.ArgumentParser(description="Process some FASTA files.")
 parser.add_argument('InputDirectory', type=str, help='The path to the directory that contains FASTA files')
 parser.add_argument('TRFPath', type=str, help='The path to the Tandem Repeats Finder executable')
-parser.add_argument('BLASTDBDirectory', type=str, help='The path to the directory to store BLAST databases')
+parser.add_argument('OutputDirectory', type=str, help='The path to the directory to store output files')
 args = parser.parse_args()
 
-process_fasta_files(args.InputDirectory, args.TRFPath, args.BLASTDBDirectory)
+process_fasta_files(args.InputDirectory, args.TRFPath, args.OutputDirectory)

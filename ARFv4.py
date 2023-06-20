@@ -226,7 +226,7 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
         writer.writeheader()
         for result in results:
             writer.writerow(result)
-
+    
 parser = argparse.ArgumentParser(description="Process some FASTA files.")
 parser.add_argument('InputDirectory', type=str, help='The path to the directory that contains FASTA files')
 parser.add_argument('TRFPath', type=str, help='The path to the Tandem Repeats Finder executable')

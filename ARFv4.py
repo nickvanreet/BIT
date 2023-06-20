@@ -95,8 +95,7 @@ def run_blast(query_file, db_name, output_file_consensus):
 
 def extract_hits_from_alignment_results(alignment_file):
     hits = []
-    num_sequences = 0
-
+    
     with open(alignment_file, 'r') as file:
         alignment_results = file.read()
 
@@ -109,8 +108,8 @@ def extract_hits_from_alignment_results(alignment_file):
         start = int(re.search(r'\bstart=(\d+)', subject_lines[0]).group(1))
         end = int(re.search(r'\bend=(\d+)', subject_lines[-1]).group(1))
         hits.append({'start': start, 'end': end, 'sequence': subject_sequence})
-        num_sequences += 1
-    return hits, num_sequences
+        
+    return hits
 
 def save_alignment_results_as_fasta(alignment_file, variant_output_filename, fasta_filename):
     num_variants = 0
@@ -200,7 +199,7 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
                 variant_output_filename = os.path.join(output_dir, f"variants_{filename}")
                 with open(fasta_file, "r") as original, open(variant_output_filename, "w") as variant:
                     variant.write(original.read())
-                    results.append({'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': tr_number, 'rep_number': 0, 'num_variants': 1})
+                    results.append({'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': tr_number, 'rep_number': 1, 'num_variants': 1})
                 continue
             
             extract_repeat_sequences(trf_output_file, output_file_consensus)
@@ -214,14 +213,14 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
             variant_output_filename = os.path.join(output_dir, f"variants_{filename}")
             variant_headers, num_variants = save_alignment_results_as_fasta(blast_output_file, variant_output_filename, filename)
 
-            hits, num_sequences = extract_hits_from_alignment_results(blast_output_file)
+            hits = extract_hits_from_alignment_results(blast_output_file)
 
-            result = {'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': tr_number, 'Rn': Rn_values, 'rep_number': num_consensus_sequences, 'num_sequences': num_sequences, 'num_variants': num_variants}
+            result = {'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': tr_number, 'Rn': Rn_values, 'rep_number': num_consensus_sequences, 'num_variants': num_variants}
             result.update(counts)
             results.append(result)
 
     with open(os.path.join(output_dir, 'results.csv'), 'w', newline='') as csvfile:
-        fieldnames = ['fasta_file', 'sequence_length', 'tr_number', '<50', '50-100', '100-250', '250-500', '>500', 'Rn', 'rep_number', 'num_sequences', 'num_variants']
+        fieldnames = ['fasta_file', 'sequence_length', 'tr_number', '<50', '50-100', '100-250', '250-500', '>500', 'Rn', 'rep_number', 'num_variants']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
         writer.writeheader()

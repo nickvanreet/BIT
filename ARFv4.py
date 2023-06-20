@@ -13,6 +13,7 @@ def run_trf(fasta_file, trf_path, name_for_trf, trf_output_file):
     subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     counts = {'<50': 0, '50-100': 0, '100-250': 0, '250-500': 0, '>500': 0}
+    Rn_values = {}
 
     with open(name_for_trf, 'r') as fasta, open(trf_output_file, 'a') as out:
         tr_number = 0
@@ -29,24 +30,25 @@ def run_trf(fasta_file, trf_path, name_for_trf, trf_output_file):
                 seq_seq = split_lin[13]
                 s = str(tr_number)
                 Rn = split_lin[3]
+                Rn_values[seq_id] = Rn
 
                 out.write('>' + seq_id + '|' + s + '|' + str(Rn) + '|' + str(len(seq_seq)) + '\n' + seq_seq + '\n')
 
-        repeat_length = len(seq_seq)
+            repeat_length = len(seq_seq)
 
-        if repeat_length < 50:
-            counts['<50'] += 1
-        elif 50 <= repeat_length < 100:
-            counts['50-100'] += 1
-        elif 100 <= repeat_length < 250:
-            counts['100-250'] += 1
-        elif 250 <= repeat_length < 500:
-            counts['250-500'] += 1
-        else:
-            counts['>500'] += 1
+            if repeat_length < 50:
+                counts['<50'] += 1
+            elif 50 <= repeat_length < 100:
+                counts['50-100'] += 1
+            elif 100 <= repeat_length < 250:
+                counts['100-250'] += 1
+            elif 250 <= repeat_length < 500:
+                counts['250-500'] += 1
+            else:
+                counts['>500'] += 1
 
     print('\nTotal number of repeats found by TRF:', str(tr_number))
-    return tr_number, counts
+    return tr_number, counts, Rn_values
 
 def extract_repeat_sequences(trf_output_file, output_file_consensus):
     repeat_sequences = []
@@ -167,7 +169,7 @@ def process_fasta_files(input_dir, trf_path, blast_db_dir, min_sequence_length=2
         else:
             name_for_trf = f'{filename}.2.7.7.80.10.50.500.dat'
             trf_output_file = os.path.join(input_dir, f'output_{filename}.fasta')
-            tr_number, counts = run_trf(fasta_file, trf_path, name_for_trf, trf_output_file)
+            tr_number, counts, Rn_values = run_trf(fasta_file, trf_path, name_for_trf, trf_output_file)
 
             output_file_consensus = os.path.join(input_dir, f'consensus_{filename}')
             extract_repeat_sequences(trf_output_file, output_file_consensus)
@@ -181,15 +183,14 @@ def process_fasta_files(input_dir, trf_path, blast_db_dir, min_sequence_length=2
             variant_output_filename = os.path.join(input_dir, f"variants_{filename}")
             save_alignment_results_as_fasta(blast_output_file, variant_output_filename, filename)
 
-            hits, num_hits = extract_hits_from_alignment_results(blast_output_file)
+            hits, num_sequences = extract_hits_from_alignment_results(blast_output_file)
 
-            result = {'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': tr_number}
+            result = {'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': tr_number, 'Rn': Rn_values, 'num_sequences': num_sequences}
             result.update(counts)
-            result['num_hits'] = num_hits
             results.append(result)
 
     with open(os.path.join(input_dir, 'results.csv'), 'w', newline='') as csvfile:
-        fieldnames = ['fasta_file', 'sequence_length', 'tr_number', '<50', '50-100', '100-250', '250-500', '>500', 'num_hits']
+        fieldnames = ['fasta_file', 'sequence_length', 'tr_number', '<50', '50-100', '100-250', '250-500', '>500', 'Rn', 'num_sequences']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
         writer.writeheader()

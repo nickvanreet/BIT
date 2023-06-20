@@ -10,7 +10,7 @@ from Bio import SeqIO
 
 def run_trf(fasta_file, trf_path, name_for_trf, trf_output_file):
     cmd = f'{trf_path} {fasta_file} 2 7 7 80 10 50 500 -d -h'
-    subprocess.run(cmd, shell=True)
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
 
     counts = {'<50': 0, '50-100': 0, '100-250': 0, '250-500': 0, '>500': 0}
     Rn_values = {}
@@ -87,11 +87,11 @@ def extract_repeat_sequences(trf_output_file, output_file_consensus):
 
 def create_blast_db(fasta_file, db_name):
     cmd = f'makeblastdb -in {fasta_file} -dbtype nucl -parse_seqids -out {db_name}'
-    subprocess.run(cmd, shell=True)
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
 
 def run_blast(query_file, db_name, output_file_consensus):
     cmd = f'blastn -query {query_file} -db {db_name} -out {output_file_consensus} -outfmt "7 qstart qend sstart send qseq sseq"'
-    subprocess.run(cmd, shell=True)
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
 
 def extract_hits_from_alignment_results(alignment_file):
     hits = []

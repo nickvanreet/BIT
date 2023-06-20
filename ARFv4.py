@@ -7,6 +7,9 @@ import subprocess
 import shutil
 from collections import defaultdict
 
+def get_last_dir_name(path):
+    return os.path.basename(os.path.normpath(path))
+
 from Bio import SeqIO
 
 def run_trf(fasta_file, trf_path, name_for_trf, trf_output_file):
@@ -153,7 +156,9 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
     # Check if the output directory exists, and if not, create it
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-
+    
+    last_folder_name = get_last_dir_name(input_dir)
+    
     # Process the FASTA files
     fasta_files = [filename for filename in os.listdir(input_dir) if filename.endswith(".fasta")]
     num_files = len(fasta_files)
@@ -234,7 +239,7 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
             result.update(counts)
             results.append(result)
 
-    with open(os.path.join(output_dir, 'results.csv'), 'w', newline='') as csvfile:
+    with open(os.path.join(output_dir, f'{last_folder_name}_results.csv'), 'w', newline='') as csvfile:
         fieldnames = ['fasta_file', 'sequence_length', 'tr_number', '<50', '50-100', '100-250', '250-500', '>500', 'Rn', 'rep_number', 'num_variants']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
@@ -253,7 +258,7 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
             records.extend(records_in_file)
             os.remove(file_path)  # Removes the individual fasta file after reading.
 
-        with open(os.path.join(output_dir, 'multi_' + category.lower() + '.fasta'), 'w') as output_handle:
+        with open(os.path.join(output_dir, f'{last_folder_name}_multi_{category.lower()}.fasta'), 'w') as output_handle:
             SeqIO.write(records, output_handle, 'fasta')
 
    # Remove alignment results and blast db output files

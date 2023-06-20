@@ -1,6 +1,7 @@
 import argparse
 import os
 import csv
+import glob
 import re
 import subprocess
 import shutil
@@ -72,7 +73,6 @@ def extract_repeat_sequences(trf_output_file, output_file_consensus):
                     repeat_sequences.append((seq_id, sequence))
 
     if not repeat_sequences:
-        print("No repeat sequences with a length between 150 and 200 bp were found.")
         return {"rep_number": 0, "repeat_sequences": []}
 
     else:
@@ -134,34 +134,39 @@ def save_alignment_results_as_fasta(alignment_file, variant_output_filename, fas
             num_variants += 1
 
     print("Total number of variant files extracted:", num_variants)
+    print("___________________________________________________________________\n")
+    
     return variant_headers, num_variants
 
 
 def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200):
     ascii_art = r'''
-    
-    \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-    \/////// \\//////// \\///////// \
-    /// \\/// \/// \\/// \/// \\\\\\\
-    ///////// \//////// \\/////// \\\
-    /// \\/// \/// \\/// \/// \\\\\\\
-    /// \\/// \/// \\/// \/// \\\\\\\
-    \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+                                                                          
+    _____  __         __      __      ___ __     ___  _____      _______  __  
+    ||__)|__)   |\/|/  \|\ |/  \|\/||__ |__)   |__ \_/||__) /\ /  `|/  \|__) 
+    ||__)|  \   |  |\__/| \|\__/|  ||___|  \   |___/ \||  \/~~\\__,|\__/|  \ 
+                                                                            
+
     '''
     print(ascii_art)
-
+    print("___________________________________________________________________\n")
     # Check if the output directory exists, and if not, create it
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    
-    # process the FASTA files
+
+    # Process the FASTA files
     fasta_files = [filename for filename in os.listdir(input_dir) if filename.endswith(".fasta")]
     num_files = len(fasta_files)
 
     results = []
+    blast_output_files = []
+    trf_dat_files = []
+    blast_db_files = []
+    
     print(f"{num_files} FASTA file(s) detected in {input_dir}.\n")
     print(f"ARF will save all output to {output_dir}.\n ")
-
+    print("___________________________________________________________________\n")
+    
     for index, filename in enumerate(fasta_files, start=1):
         fasta_file = os.path.join(input_dir, filename)
 
@@ -171,13 +176,15 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
             fasta_data = file.read().strip().split('\n', 1)
             sequence_length = len(fasta_data[1].replace('\n', ''))
 
-        print(f"Sequence length: {sequence_length} bases")
+        print(f"Sequence length: {sequence_length} bases\n")
 
         tr_number = 0
 
         if sequence_length < min_sequence_length:
-            print(f"Sequence is shorter than {min_sequence_length} bases. Skipping TRF to the next sequence.")
-            skipped_filename = f"variant_{filename}"
+            print(f"Sequence is shorter than {min_sequence_length} bases.")
+            print("Instead of passing through TRF, this sequence is directly saved as variant.\n")
+            print("ס₪₪₪₪§|(Ξ≥≤≥≤≥≤ΞΞΞΞΞΞΞΞΞΞ>\n")
+            skipped_filename = f"variants_{filename}"
             skipped_file_path = os.path.join(output_dir, skipped_filename)
             with open(skipped_file_path, 'w') as skipped_file:
                 skipped_file.write('\n'.join(fasta_data)) # fasta_data contains both header and sequence
@@ -187,6 +194,8 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
 
         else:
             name_for_trf = os.path.join(input_dir, f'{filename}.2.7.7.80.10.50.500.dat')
+            moved_name = os.path.join(output_dir, f'{filename}.2.7.7.80.10.50.500.dat')
+            trf_dat_files.append(moved_name)
             trf_output_file = os.path.join(output_dir, f'output_{filename}.fasta')
             tr_number, counts, Rn_values = run_trf(fasta_file, trf_path, name_for_trf, trf_output_file)
 
@@ -195,21 +204,27 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
             num_consensus_sequences = consensus_data['rep_number']
 
             if num_consensus_sequences == 0:
-                print(f"No sequences between 150-200 bp found in {filename}. Saving the original sequence as a variant.")
+                print(f"Sequences does not contain a consensus between 150-200 bp.") 
+                print("Instead of passing through TRF, this sequence is directly saved as variant.\n")
+                print("___________________________________________________________________\n")
                 variant_output_filename = os.path.join(output_dir, f"variants_{filename}")
                 with open(fasta_file, "r") as original, open(variant_output_filename, "w") as variant:
                     variant.write(original.read())
-                    results.append({'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': tr_number, 'rep_number': 0, 'num_variants': 1})
+                
+                results.append({'fasta_file': filename, 'sequence_length': sequence_length, 'tr_number': tr_number, 'rep_number': 0, 'num_variants': 1})
                 continue
             
-            extract_repeat_sequences(trf_output_file, output_file_consensus)
-
+            # Create BLAST database
             db_name = os.path.join(output_dir, filename)
+            blast_db_files.append(db_name)
             create_blast_db(fasta_file, db_name)
 
+            # Run BLAST search
             blast_output_file = os.path.join(output_dir, f'alignment_results_{filename}.txt')
+            blast_output_files.append(blast_output_file)
             run_blast(output_file_consensus, db_name, blast_output_file)
 
+            # Save alignment results as a multi-FASTA file
             variant_output_filename = os.path.join(output_dir, f"variants_{filename}")
             variant_headers, num_variants = save_alignment_results_as_fasta(blast_output_file, variant_output_filename, filename)
 
@@ -226,11 +241,39 @@ def process_fasta_files(input_dir, trf_path, output_dir, min_sequence_length=200
         writer.writeheader()
         for result in results:
             writer.writerow(result)
-    
-parser = argparse.ArgumentParser(description="Process some FASTA files.")
-parser.add_argument('InputDirectory', type=str, help='The path to the directory that contains FASTA files')
-parser.add_argument('TRFPath', type=str, help='The path to the Tandem Repeats Finder executable')
-parser.add_argument('OutputDirectory', type=str, help='The path to the directory to store output files')
-args = parser.parse_args()
 
-process_fasta_files(args.InputDirectory, args.TRFPath, args.OutputDirectory)
+    categories = ['Output', 'Consensus', 'Variants']
+
+    for category in categories:
+        files = glob.glob(os.path.join(output_dir, category.lower() + '_*.fasta'))     
+        records = []
+
+        for file_path in files:
+            records_in_file = list(SeqIO.parse(file_path, 'fasta'))
+            records.extend(records_in_file)
+            os.remove(file_path)  # Removes the individual fasta file after reading.
+
+        with open(os.path.join(output_dir, 'multi_' + category.lower() + '.fasta'), 'w') as output_handle:
+            SeqIO.write(records, output_handle, 'fasta')
+
+   # Remove alignment results and blast db output files
+    all_files_to_delete = blast_output_files + trf_dat_files + [f'{file}.n*' for file in blast_db_files]
+
+    for file_path in all_files_to_delete:
+        for resolved_file_path in glob.glob(file_path):
+            os.remove(resolved_file_path)
+           
+
+    print("Processing of FASTA files in the directory is complete.")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Process some FASTA files.")
+    parser.add_argument('InputDirectory', type=str, help='The path to the directory that contains FASTA files')
+    parser.add_argument('TRFPath', type=str, help='The path to the Tandem Repeats Finder executable')
+    parser.add_argument('OutputDirectory', type=str, help='The path to the directory to store output files')
+    args = parser.parse_args()
+
+    # Specify the output directory
+    output_dir = args.OutputDirectory  # Replace with the actual argument for output directory
+
+    process_fasta_files(args.InputDirectory, args.TRFPath, args.OutputDirectory)

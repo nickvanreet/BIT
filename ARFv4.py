@@ -7,6 +7,9 @@ import subprocess
 import shutil
 from collections import defaultdict
 
+### script to isolate monomeric TBR variants from multimeric TBR FASTA files
+### python3 /path/to/script.py /path/to/input (careful for TRF output!) /path/to/trf
+
 def get_last_dir_name(path):
     return os.path.basename(os.path.normpath(path))
 

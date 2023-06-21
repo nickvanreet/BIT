@@ -1,60 +1,45 @@
 from Bio import SeqIO
-from Bio import pairwise2
-from Bio.pairwise2 import format_alignment
+from collections import defaultdict
+import os
 
 def parse_sequence_file(file_path):
-    sequences = []
-    for record in SeqIO.parse(file_path, "fasta"):
-        sequence_info = record.description.split(' | ')
-        sequence = str(record.seq)
-        sequences.append((sequence_info, sequence))
+    with open(file_path, "r") as handle:
+        sequences = list(SeqIO.parse(handle, "fasta"))
     return sequences
 
-def find_unique_tbg_hits(sequences):
-    unique_tbg_hits = {}
-    for sequence_info, sequence in sequences:
-        hits = sequence_info[2].replace('Hits: ', '').split(' & ')
-        for hit in hits:
-            if hit.startswith('Tbb'):
-                if hit in unique_tbg_hits:
-                    unique_tbg_hits[hit] = unique_tbg_hits.get(hit, 0) + 1
-                else:
-                    unique_tbg_hits[hit] = 1
-    return unique_tbg_hits
+def find_tbg_specific_snps(sequences):
+    snp_positions = defaultdict(lambda: defaultdict(int))
+    tbg_specific_snps = defaultdict(list)
+    possible_nucleotides = ['A', 'T', 'C', 'G']
 
-def find_snps(sequences):
-    snps = []
-    for sequence_info, sequence in sequences:
-        hits = sequence_info[2].replace('Hits: ', '').split(' & ')
-        for hit in hits:
-            seq = sequences[hits.index(hit)][1]
-            alignments = pairwise2.align.globalxx(sequence, seq)
-            for alignment in alignments:
-                aligned_seq1, aligned_seq2, _, _, _ = alignment
-                snp_positions = [i for i, (a, b) in enumerate(zip(aligned_seq1, aligned_seq2)) if a != b]
-                for position in snp_positions:
-                    snp = f"{hit} - {aligned_seq1[position]}-{aligned_seq2[position]} at {position}"
-                    snps.append(snp)
-    return snps
+    for seq_record in sequences:
+        description_fields = seq_record.description.split('|')
+        hits_field = None
+        for field in description_fields:
+            if "Hits:" in field:
+                hits_field = field
+                break
+        if hits_field:
+            hits = [hit.strip() for hit in hits_field.split(':')[1].split('&')]
+            for i, nucleotide in enumerate(str(seq_record.seq)):
+                for hit in hits:
+                    snp_positions[i+1][hit.split('_')[0] + '_' + nucleotide] += 1
 
-# Path to your sequence file
-file_path = 'unique_sequences_GCGCAGTT.fasta'
+    for position, snps in snp_positions.items():
+        for possible_nucleotide in possible_nucleotides:
+            tbg_count = sum(count for snp, count in snps.items() if 'Tbg_' + possible_nucleotide in snp)
+            tbb_tbr_count = sum(count for snp, count in snps.items() if 'Tbb_' + possible_nucleotide in snp or 'Tbr_' + possible_nucleotide in snp)
+            tbg_specific_snps[position].append((possible_nucleotide, tbg_count, tbb_tbr_count))
 
-# Parse the sequence file
-sequences = parse_sequence_file(file_path)
+    return tbg_specific_snps
 
-# Find unique TBG hits and their counts
-unique_tbg_hits = find_unique_tbg_hits(sequences)
+def write_to_file(tbg_specific_snps, output_file):
+    with open(output_file, 'w') as file:
+        file.write('Position\tSNP in Tbg\tTotal Tbg Clones\tSNP in Tbb/Tbr\tTotal Tbb/Tbr Clones\n')
+        for position, snps in tbg_specific_snps.items():
+            for snp in snps:
+                file.write(f'{position}\tTbg_{snp[0]}\t{snp[1]}\tTbb/Tbr_{snp[0]}\t{snp[2]}\n')
 
-# Find SNPs in aligned sequences
-snps = find_snps(sequences)
-
-# Print the unique TBG hits and their counts
-print("Unique TBG Hits:")
-for hit, count in unique_tbg_hits.items():
-    print(f"{hit}: {count}")
-
-# Print the SNPs
-print("\nSNPs:")
-for snp in snps:
-    print(snp)
+sequences = parse_sequence_file('unique_sequences_GCGCAGTT.fasta')
+tbg_specific_snps = find_tbg_specific_snps(sequences)
+write_to_file(tbg_specific_snps, 'SNP_counts.txt')

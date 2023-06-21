@@ -4,10 +4,17 @@ import argparse
 from collections import defaultdict
 from Bio import SeqIO
 
-#USAGE: python script.py -i your/input/directory -o your/output/directory -t your_target_sequence
+# USAGE: python script.py -i your/input/directory -o your/output/directory -t your_target_sequence
 
-def create_multifasta(output_dir, output_filename, prefix):
-    files = glob.glob(os.path.join(output_dir, f'{prefix}_*_{args.target}_*.fasta'))
+def create_multifasta(output_dir, output_filename, prefix, target_sequence):
+    files = glob.glob(os.path.join(output_dir, f'{prefix}*_{target_sequence}_*.fasta'))
+    print(f"Creating multifasta file: {output_filename}")
+    print(f"Files to be merged: {files}")
+
+    # Construct the correct filenames
+    files = [filename for filename in files if prefix in filename]
+    print(f"Files to be merged after filtering: {files}")
+
     with open(output_filename, 'w') as outfile:
         for filename in files:
             with open(filename, 'r') as readfile:
@@ -15,7 +22,10 @@ def create_multifasta(output_dir, output_filename, prefix):
             os.remove(filename)  # remove the file after its content has been written to the output file
     return len(files)
 
+
+
 def search_and_reorganize_sequences(variant_output_filename, target_sequence, output_dir):
+    print(f"Processing file: {variant_output_filename}")
     fasta_entries = SeqIO.parse(variant_output_filename, 'fasta')
     reconstructed_sequences = []
     sequences_not_found = []
@@ -45,7 +55,7 @@ def search_and_reorganize_sequences(variant_output_filename, target_sequence, ou
 
         if not match_found:
             sequences_not_found.append((header, sequence))
-    
+
     output_file = os.path.join(output_dir, f'reorganized_{target_sequence}_{fasta_filename}')
     not_found_file = os.path.join(output_dir, f'sequences_not_found_{target_sequence}_{fasta_filename}')
 
@@ -83,13 +93,17 @@ def process_sequences(input_dir, output_dir, target_sequence):
 
     # Create the multifasta file for reorganized files and remove individual FASTA files
     output_reorganized_file = os.path.join(output_dir, f'reorg_multi_{target_sequence}.fasta')
-    reorganized_file_count = create_multifasta(output_dir, output_reorganized_file, 'reorganized')
+    reorganized_file_count = create_multifasta(output_dir, output_reorganized_file, 'reorganized', target_sequence)
     total_file_count += reorganized_file_count
+    print(f"Reorganized multifasta file created: {output_reorganized_file}")
+    print(f"Number of reorganized files merged: {reorganized_file_count}")
 
     # Create the multifasta file for sequences not found files and remove individual FASTA files
     output_sequences_not_found_file = os.path.join(output_dir, f'not_found_multi_{target_sequence}.fasta')
-    sequences_not_found_file_count = create_multifasta(output_dir, output_sequences_not_found_file, 'sequences_not_found')
+    sequences_not_found_file_count = create_multifasta(output_dir, output_sequences_not_found_file, 'sequences_not_found', target_sequence)
     total_file_count += sequences_not_found_file_count
+    print(f"Sequences not found multifasta file created: {output_sequences_not_found_file}")
+    print(f"Number of sequences not found files merged: {sequences_not_found_file_count}")
 
     # Create a multifasta file for unique and non-unique sequences
     unique_sequences = defaultdict(list)

@@ -10,7 +10,7 @@ def parse_sequence_file(file_path):
 def find_tbg_specific_snps(sequences):
     snp_positions = defaultdict(lambda: defaultdict(int))
     tbg_specific_snps = defaultdict(list)
-    possible_nucleotides = ['A', 'T', 'C', 'G']
+    possible_nucleotides = ['A', 'T', 'C', 'G', 'R', 'Y', 'S', 'W', 'K', 'M', 'B', 'D', 'H', 'V', 'N', '-']
 
     for seq_record in sequences:
         description_fields = seq_record.description.split('|')
@@ -40,6 +40,6 @@ def write_to_file(tbg_specific_snps, output_file):
             for snp in snps:
                 file.write(f'{position}\tTbg_{snp[0]}\t{snp[1]}\tTbb/Tbr_{snp[0]}\t{snp[2]}\n')
 
-sequences = parse_sequence_file('unique_sequences_GCGCAGTT.fasta')
+sequences = parse_sequence_file('unique_sequences_175_180bp_GCGCAGTT.fa')
 tbg_specific_snps = find_tbg_specific_snps(sequences)
 write_to_file(tbg_specific_snps, 'SNP_counts.txt')

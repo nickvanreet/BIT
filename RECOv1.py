@@ -141,19 +141,19 @@ def process_sequences(input_dir, output_dir, target_sequence):
     print(f"Number of unique sequences: {count}")
     print(f"Unique sequences saved in: {unique_output_file}")
 
-    # Write unique sequences <upto 180 bp to a multifasta file and count the number of sequences
-    unique_output_file_180bp = os.path.join(output_dir, f"unique_sequences_180bp_{target_sequence}.fasta")
-    with open(unique_output_file_180bp, "w") as file:
+    # Write unique sequences 175 - 180 bp to a multifasta file and count the number of sequences
+    unique_output_file_175_180bp = os.path.join(output_dir, f"unique_sequences_175_180bp_{target_sequence}.fasta")
+    with open(unique_output_file_175_180bp, "w") as file:
         count = 0
         for i, (sequence_str, sequences) in enumerate(sorted_unique_sequences):
-            if len(sequence_str) <= 180:  # Only consider sequences up to 180 bp
+            if 175 <= len(sequence_str) <= 180:  # Only consider sequences between 175 and 180 bp
                 count += len(sequences)
                 original_headers = [seq.description.split("|")[0].strip().lstrip(">/").split("/")[-1] for seq, _ in sequences]
                 header = f"Unique_{i} | Count: {len(sequences)} | Hits: {' & '.join(original_headers)}"
                 file.write(f">{header}\n{sequence_str}\n")
 
-    print(f"Number of unique sequences up to 180 bp: {count}")
-    print(f"Unique sequences up to 180 bp saved in: {unique_output_file_180bp}")
+    print(f"Number of unique sequences between 175 and 180 bp: {count}")
+    print(f"Unique sequences between 175 and 180 bp saved in: {unique_output_file_175_180bp}")
 
     # Write non-unique sequences to a multifasta file and count the number of sequences
     non_unique_output_file = os.path.join(output_dir, f"non_unique_sequences_{target_sequence}.fasta")

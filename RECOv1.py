@@ -4,6 +4,8 @@ import argparse
 from collections import defaultdict
 from Bio import SeqIO
 
+# USAGE: python script.py -i your/input/directory -o your/output/directory -t your_target_sequence
+
 def create_multifasta(output_dir, output_filename, prefix, target_sequence):
     files = glob.glob(os.path.join(output_dir, f'{prefix}*_{target_sequence}_*.fasta'))
     print(f"Creating multifasta file: {output_filename}")
@@ -19,6 +21,7 @@ def create_multifasta(output_dir, output_filename, prefix, target_sequence):
                 outfile.write(readfile.read())
             os.remove(filename)  # remove the file after its content has been written to the output file
     return len(files)
+
 
 
 def search_and_reorganize_sequences(variant_output_filename, target_sequence, output_dir):
@@ -76,22 +79,6 @@ def search_and_reorganize_sequences(variant_output_filename, target_sequence, ou
     print(f'Total number of variants not found: {not_found_count}')
 
 
-def write_sequences(output_file, sequences, strain):
-    sequence_counts = defaultdict(int)
-
-    for sequence in sequences:
-        sequence_counts[str(sequence.seq)] += 1
-
-    sequences_with_counts = [(count, seq) for seq, count in sequence_counts.items()]
-    sequences_with_counts.sort(reverse=True)  # Sort sequences based on count in descending order
-
-    with open(output_file, 'w') as file:
-        for count, sequence in sequences_with_counts:
-            header = f">{strain} | Count: {count}"
-            file.write(f"{header}\n")
-            file.write(f"{sequence}\n")
-
-
 def process_sequences(input_dir, output_dir, target_sequence):
     # Check if the output directory exists and create it if necessary
     if not os.path.exists(output_dir):
@@ -108,11 +95,15 @@ def process_sequences(input_dir, output_dir, target_sequence):
     output_reorganized_file = os.path.join(output_dir, f'reorg_multi_{target_sequence}.fasta')
     reorganized_file_count = create_multifasta(output_dir, output_reorganized_file, 'reorganized', target_sequence)
     total_file_count += reorganized_file_count
+    print(f"Reorganized multifasta file created: {output_reorganized_file}")
+    print(f"Number of reorganized files merged: {reorganized_file_count}")
 
     # Create the multifasta file for sequences not found files and remove individual FASTA files
     output_sequences_not_found_file = os.path.join(output_dir, f'not_found_multi_{target_sequence}.fasta')
     sequences_not_found_file_count = create_multifasta(output_dir, output_sequences_not_found_file, 'sequences_not_found', target_sequence)
     total_file_count += sequences_not_found_file_count
+    print(f"Sequences not found multifasta file created: {output_sequences_not_found_file}")
+    print(f"Number of sequences not found files merged: {sequences_not_found_file_count}")
 
     # Create a multifasta file for unique and non-unique sequences
     unique_sequences = defaultdict(list)
@@ -124,38 +115,43 @@ def process_sequences(input_dir, output_dir, target_sequence):
 
         # Iterate through each sequence
         for sequence in sequences:
-            # Determine the strain based on the filename
-            filename = sequence.description.split("|")[0].strip().split("_")
-            strain = filename[0]
+            # Check if the sequence is unique
+            sequence_str = str(sequence.seq)
+            if sequence_str not in unique_sequences:
+                unique_sequences[sequence_str] = [(sequence, sequence.description)]
+            else:
+                unique_sequences[sequence_str].append((sequence, sequence.description))
+                non_unique_sequences.append(sequence)
 
-            # Add the sequence to the corresponding strain dictionary
-            unique_sequences[strain].append(sequence)
+    # Write unique sequences to a multifasta file and count the number of sequences
+    unique_output_file = os.path.join(output_dir, f"unique_sequences_{target_sequence}.fasta")
+    with open(unique_output_file, "w") as file:
+        unique_sequences_list = list(unique_sequences.items())
 
-    # Write unique sequences to multifasta files for each strain
-    for strain, sequences in unique_sequences.items():
-        unique_output_file = os.path.join(output_dir, f"unique_sequences_{strain}.fasta")
-        write_sequences(unique_output_file, sequences, strain)
-        print(f"Number of unique sequences in {strain}: {len(sequences)}")
-        print(f"Unique sequences saved in: {unique_output_file}")
+        # Sort the unique sequences based on count (in descending order)
+        sorted_unique_sequences = sorted(unique_sequences_list, key=lambda x: len(x[1]), reverse=True)
 
-    # Write non-unique sequences to a multifasta file
+        count = 0
+        for i, (sequence_str, sequences) in enumerate(sorted_unique_sequences):
+            count += len(sequences)
+            original_headers = [seq.description.split("|")[0].strip().lstrip(">/").split("/")[-1] for seq, _ in sequences]
+            header = f"Unique_{i} | Count: {len(sequences)} | Hits: {' & '.join(original_headers)}"
+            file.write(f">{header}\n{sequence_str}\n")
+
+    print(f"Number of unique sequences: {count}")
+    print(f"Unique sequences saved in: {unique_output_file}")
+
+
+    # Write non-unique sequences to a multifasta file and count the number of sequences
     non_unique_output_file = os.path.join(output_dir, f"non_unique_sequences_{target_sequence}.fasta")
-    write_sequences(non_unique_output_file, non_unique_sequences, target_sequence)
-    print(f"Number of non-unique sequences: {len(non_unique_sequences)}")
-    print(f"Non-unique sequences saved in: {non_unique_output_file}")
-
-    # Create an overview of unique sequences found in each strain
-    overview_file = os.path.join(output_dir, "unique_sequences_overview.txt")
-    with open(overview_file, "w") as file:
-        file.write("Strain\tSequence ID\n")
-        for strain, sequences in unique_sequences.items():
-            for sequence in sequences:
-                sequence_id = sequence.id
-                file.write(f"{strain}\t{sequence_id}\n")
-
-    print(f"Unique sequences overview saved in: {overview_file}")
-    print(f"Total number of processed files: {total_file_count}")
-
+    with open(non_unique_output_file, "w") as file:
+        count = 0
+        for i, sequence in enumerate(non_unique_sequences):
+            count += 1
+            header = f"{target_sequence} | Length: {len(sequence.seq)}"
+            file.write(f">{header}\n{sequence.seq}\n")
+        print(f"Number of non-unique sequences: {count}")
+        print(f"Non-unique sequences saved in: {non_unique_output_file}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process multi-FASTA files to search and reorganize sequences.')

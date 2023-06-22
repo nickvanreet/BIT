@@ -1,6 +1,8 @@
 from Bio import SeqIO
+import subprocess
 from collections import defaultdict
 import pandas as pd
+import os
 
 possible_nucleotides = ['A', 'T', 'C', 'G', 'R', 'Y', 'S', 'W', 'K', 'M', 'B', 'D', 'H', 'V', 'N', '-']
 
@@ -44,10 +46,22 @@ def write_to_file(tbg_specific_snps, output_file):
     df = df.pivot_table(index=['Position', 'Nucleotide'], columns='Species_Strain', values='Count', fill_value=0)
     df.to_csv(output_file)
 
+def align_sequences(input_file, output_file):
+    subprocess.run(["muscle", "-align", input_file, "-output", output_file])
+
 # Ask user for the target sequence
 target_sequence = input("Please enter the target sequence: ")
 
 # Modify the file name to include the target sequence
-sequences = parse_sequence_file(f'{target_sequence}_unique_sequences_175_180bp.fa')
+input_file = f'{target_sequence}_unique_sequences_175_180bp.fasta'
+output_file = f'{target_sequence}_aligned.fa'
+
+# Align the sequences
+align_sequences(input_file, output_file)
+
+# Read the aligned sequences and find SNPs
+sequences = parse_sequence_file(output_file)
 tbg_specific_snps = find_tbg_specific_snps(sequences)
-write_to_file(tbg_specific_snps, 'SNP_counts.csv')
+
+# Write SNP counts to a file
+write_to_file(tbg_specific_snps, f'{target_sequence}_SNP_counts.csv')

@@ -9,11 +9,11 @@ from Bio import SeqIO
 def create_multifasta(output_dir, output_filename, prefix, target_sequence):
     files = glob.glob(os.path.join(output_dir, f'{prefix}*_{target_sequence}_*.fasta'))
     print(f"Creating multifasta file: {output_filename}")
-    print(f"Files to be merged: {files}")
+    #print(f"Files to be merged: {files}")
 
     # Construct the correct filenames
     files = [filename for filename in files if prefix in filename]
-    print(f"Files to be merged after filtering: {files}")
+    #print(f"Files to be merged after filtering: {files}")
 
     with open(output_filename, 'w') as outfile:
         for filename in files:
@@ -92,14 +92,14 @@ def process_sequences(input_dir, output_dir, target_sequence):
         search_and_reorganize_sequences(multifasta_file, target_sequence, output_dir)
 
     # Create the multifasta file for reorganized files and remove individual FASTA files
-    output_reorganized_file = os.path.join(output_dir, f'reorg_multi_{target_sequence}.fasta')
+    output_reorganized_file = os.path.join(output_dir, f'{target_sequence}_reorg_multi.fasta')
     reorganized_file_count = create_multifasta(output_dir, output_reorganized_file, 'reorganized', target_sequence)
     total_file_count += reorganized_file_count
     print(f"Reorganized multifasta file created: {output_reorganized_file}")
     print(f"Number of reorganized files merged: {reorganized_file_count}")
 
     # Create the multifasta file for sequences not found files and remove individual FASTA files
-    output_sequences_not_found_file = os.path.join(output_dir, f'not_found_multi_{target_sequence}.fasta')
+    output_sequences_not_found_file = os.path.join(output_dir, f'{target_sequence}_not_found_multi.fasta')
     sequences_not_found_file_count = create_multifasta(output_dir, output_sequences_not_found_file, 'sequences_not_found', target_sequence)
     total_file_count += sequences_not_found_file_count
     print(f"Sequences not found multifasta file created: {output_sequences_not_found_file}")
@@ -124,7 +124,7 @@ def process_sequences(input_dir, output_dir, target_sequence):
                 non_unique_sequences.append(sequence)
 
     # Write unique sequences to a multifasta file and count the number of sequences
-    unique_output_file = os.path.join(output_dir, f"unique_sequences_{target_sequence}.fasta")
+    unique_output_file = os.path.join(output_dir, f"{target_sequence}_unique_sequences.fasta")
     with open(unique_output_file, "w") as file:
         unique_sequences_list = list(unique_sequences.items())
 
@@ -142,7 +142,7 @@ def process_sequences(input_dir, output_dir, target_sequence):
     print(f"Unique sequences saved in: {unique_output_file}")
 
     # Write unique sequences 175 - 180 bp to a multifasta file and count the number of sequences
-    unique_output_file_175_180bp = os.path.join(output_dir, f"unique_sequences_175_180bp_{target_sequence}.fasta")
+    unique_output_file_175_180bp = os.path.join(output_dir, f"{target_sequence}_unique_sequences_175_180bp.fasta")
     with open(unique_output_file_175_180bp, "w") as file:
         count = 0
         for i, (sequence_str, sequences) in enumerate(sorted_unique_sequences):
@@ -156,7 +156,7 @@ def process_sequences(input_dir, output_dir, target_sequence):
     print(f"Unique sequences between 175 and 180 bp saved in: {unique_output_file_175_180bp}")
 
     # Write non-unique sequences to a multifasta file and count the number of sequences
-    non_unique_output_file = os.path.join(output_dir, f"non_unique_sequences_{target_sequence}.fasta")
+    non_unique_output_file = os.path.join(output_dir, f"{target_sequence}_non_unique_sequences.fasta")
     with open(non_unique_output_file, "w") as file:
         count = 0
         for i, sequence in enumerate(non_unique_sequences):

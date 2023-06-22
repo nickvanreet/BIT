@@ -5,16 +5,13 @@ import csv
 from collections import defaultdict
 from Bio import SeqIO
 
-# USAGE: python script.py -i your/input/directory -o your/output/directory -t your_target_sequence
-
+# Function to create a merged multifasta file
 def create_multifasta(output_dir, output_filename, prefix, target_sequence):
     files = glob.glob(os.path.join(output_dir, f'{prefix}*_{target_sequence}_*.fasta'))
     print(f"Creating multifasta file: {output_filename}")
-    #print(f"Files to be merged: {files}")
 
     # Construct the correct filenames
     files = [filename for filename in files if prefix in filename]
-    #print(f"Files to be merged after filtering: {files}")
 
     with open(output_filename, 'w') as outfile:
         for filename in files:
@@ -24,7 +21,7 @@ def create_multifasta(output_dir, output_filename, prefix, target_sequence):
     return len(files)
 
 
-
+# Function to search and reorganize sequences in a multifasta file
 def search_and_reorganize_sequences(variant_output_filename, target_sequence, output_dir):
     print(f"Processing file: {variant_output_filename}")
     fasta_entries = SeqIO.parse(variant_output_filename, 'fasta')
@@ -79,68 +76,62 @@ def search_and_reorganize_sequences(variant_output_filename, target_sequence, ou
     print(f'Total number of variants reconstructed: {reconstructed_count}')
     print(f'Total number of variants not found: {not_found_count}')
 
-    return len(reconstructed_sequences), len(sequences_not_found)
+    return len(reconstructed_sequences), len(sequences_not_found), output_file
 
+
+# Main function to process multi-FASTA files
 def process_sequences(input_dir, output_dir, target_sequence):
     # Check if the output directory exists and create it if necessary
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     multifasta_files = glob.glob(os.path.join(input_dir, '*_multi_variants.fasta'))
-    total_file_count = 0  # Initialize the variable here
-    results = []
 
-    for multifasta_file in multifasta_files:
-        filename = os.path.basename(multifasta_file)
-        
-        # Use the returned values from search_and_reorganize_sequences function
-        number_of_variants_reconstructed, number_of_variants_not_found = search_and_reorganize_sequences(multifasta_file, target_sequence, output_dir)
+    # Open the CSV file for writing
+    with open(os.path.join(output_dir, f'{target_sequence}_counts.csv'), 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Filename", "Target Sequence", "Number of Variants Reconstructed", "Number of Variants Not Found",
+                         "Number of Unique Sequences", "Number of Unique Sequences between 175 and 180 bp", "Number of Non-Unique Sequences"])
 
-        # Create a dictionary and a list to hold unique and non-unique sequences
-        # Move these lines inside the loop so they are reset for each file
+        for multifasta_file in multifasta_files:
+            filename = os.path.basename(multifasta_file)
 
+            # Use the returned values from search_and_reorganize_sequences function
+            number_of_variants_reconstructed, number_of_variants_not_found, output_file = search_and_reorganize_sequences(multifasta_file, target_sequence, output_dir)
 
-        # Update unique_sequences and non_unique_sequences based on the data in the file
-        with open(multifasta_file, "r") as file:
-            sequences = SeqIO.parse(file, "fasta")
-            
-            unique_sequences = defaultdict(list)
-            non_unique_sequences = []
-            
-            for sequence in sequences:
-                sequence_str = str(sequence.seq)
+            # Update unique_sequences and non_unique_sequences based on the data in the file
+            with open(output_file, "r") as file:
+                sequences = SeqIO.parse(file, "fasta")
 
-                if sequence_str not in unique_sequences:
-                    unique_sequences[sequence_str].append(sequence)
-                else:
-                    non_unique_sequences.append(sequence)
+                unique_sequences = defaultdict(list)
+                non_unique_sequences = []
 
-            # Calculate the number of unique and non-unique sequences
-            number_of_unique_sequences = len(unique_sequences)
-            number_of_unique_sequences_175_180bp = sum([1 for seq in unique_sequences if 175 <= len(seq) <= 180])
-            number_of_non_unique_sequences = len(non_unique_sequences)
-            
-            results.append([filename, target_sequence, number_of_variants_reconstructed, number_of_variants_not_found,
-                            number_of_unique_sequences, number_of_unique_sequences_175_180bp, number_of_non_unique_sequences])
+                for sequence in sequences:
+                    sequence_str = str(sequence.seq)
 
-    # Write the results to a CSV file
-    # with open(os.path.join(output_dir, 'results.csv'), 'w', newline='') as csvfile:
-    #    writer = csv.writer(csvfile)
-    #    writer.writerow(["Filename", "Target Sequence", "Number of Variants Reconstructed", "Number of Variants Not Found",
-    #                     "Number of Unique Sequences", "Number of Unique Sequences between 175 and 180 bp", "Number of Non-Unique Sequences"])
-    #    writer.writerows(results)
-         
+                    if sequence_str not in unique_sequences:
+                        unique_sequences[sequence_str].append(sequence)
+                    else:
+                        non_unique_sequences.append(sequence)
+
+                # Calculate the number of unique and non-unique sequences
+                number_of_unique_sequences = len(unique_sequences)
+                number_of_unique_sequences_175_180bp = sum([1 for seq in unique_sequences if 175 <= len(seq) <= 180])
+                number_of_non_unique_sequences = len(non_unique_sequences)
+
+                # Write results to the CSV file
+                writer.writerow([filename, target_sequence, number_of_variants_reconstructed, number_of_variants_not_found,
+                                 number_of_unique_sequences, number_of_unique_sequences_175_180bp, number_of_non_unique_sequences])
+
     # Create the multifasta file for reorganized files and remove individual FASTA files
     output_reorganized_file = os.path.join(output_dir, f'{target_sequence}_reorg_multi.fasta')
     reorganized_file_count = create_multifasta(output_dir, output_reorganized_file, 'reorganized', target_sequence)
-    total_file_count += reorganized_file_count
     print(f"Reorganized multifasta file created: {output_reorganized_file}")
     print(f"Number of reorganized files merged: {reorganized_file_count}")
 
     # Create the multifasta file for sequences not found files and remove individual FASTA files
     output_sequences_not_found_file = os.path.join(output_dir, f'{target_sequence}_not_found_multi.fasta')
     sequences_not_found_file_count = create_multifasta(output_dir, output_sequences_not_found_file, 'sequences_not_found', target_sequence)
-    total_file_count += sequences_not_found_file_count
     print(f"Sequences not found multifasta file created: {output_sequences_not_found_file}")
     print(f"Number of sequences not found files merged: {sequences_not_found_file_count}")
 
@@ -205,12 +196,6 @@ def process_sequences(input_dir, output_dir, target_sequence):
         print(f"Number of non-unique sequences: {count}")
         print(f"Non-unique sequences saved in: {non_unique_output_file}")
 
-    # Write the results to a CSV file
-    with open(os.path.join(output_dir, f'{target_sequence}_counts.csv'), 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(["Filename", "Target Sequence", "Number of Variants Reconstructed", "Number of Variants Not Found",
-                         "Number of Unique Sequences", "Number of Unique Sequences between 175 and 180 bp", "Number of Non-Unique Sequences"])
-        writer.writerows(results)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process multi-FASTA files to search and reorganize sequences.')

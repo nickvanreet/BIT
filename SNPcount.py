@@ -57,7 +57,7 @@ input_file = f'{target_sequence}_unique_sequences_175_180bp.fasta'
 output_file = f'{target_sequence}_aligned.fa'
 
 # Align the sequences
-align_sequences(input_file, output_file)
+align_sequences(os.path.join("~/RECO", input_file), output_file)
 
 # Read the aligned sequences and find SNPs
 sequences = parse_sequence_file(output_file)

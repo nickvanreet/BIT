@@ -5,6 +5,8 @@ import csv
 from collections import defaultdict
 from Bio import SeqIO
 
+#best output
+
 # Function to create a merged multifasta file
 def create_multifasta(output_dir, output_filename, prefix, target_sequence):
     files = glob.glob(os.path.join(output_dir, f'{prefix}*_{target_sequence}_*.fasta'))
@@ -87,6 +89,11 @@ def process_sequences(input_dir, output_dir, target_sequence):
 
     multifasta_files = glob.glob(os.path.join(input_dir, '*_multi_variants.fasta'))
 
+    # Initialize counters for total counts
+    total_unique_sequences = 0
+    total_unique_sequences_175_180bp = 0
+    total_non_unique_sequences = 0
+
     # Open the CSV file for writing
     with open(os.path.join(output_dir, f'{target_sequence}_counts.csv'), 'w', newline='') as f:
         writer = csv.writer(f)
@@ -122,6 +129,17 @@ def process_sequences(input_dir, output_dir, target_sequence):
                 # Write results to the CSV file
                 writer.writerow([filename, target_sequence, number_of_variants_reconstructed, number_of_variants_not_found,
                                  number_of_unique_sequences, number_of_unique_sequences_175_180bp, number_of_non_unique_sequences])
+
+            # Update total counts
+            total_unique_sequences += number_of_unique_sequences
+            total_unique_sequences_175_180bp += number_of_unique_sequences_175_180bp
+            total_non_unique_sequences += number_of_non_unique_sequences
+
+    # Append total counts to the CSV file
+    with open(os.path.join(output_dir, f'{target_sequence}_counts.csv'), 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Total", target_sequence, "", "", total_unique_sequences,
+                         total_unique_sequences_175_180bp, total_non_unique_sequences])
 
     # Create the multifasta file for reorganized files and remove individual FASTA files
     output_reorganized_file = os.path.join(output_dir, f'{target_sequence}_reorg_multi.fasta')
@@ -171,6 +189,13 @@ def process_sequences(input_dir, output_dir, target_sequence):
     print(f"Number of unique sequences: {count}")
     print(f"Unique sequences saved in: {unique_output_file}")
 
+
+    with open(os.path.join(output_dir, f'{target_sequence}_counts.csv'), 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Total_unique_sequences", target_sequence, "", "", count,
+                         "", ""])
+    
+
     # Write unique sequences 175 - 180 bp to a multifasta file and count the number of sequences
     unique_output_file_175_180bp = os.path.join(output_dir, f"{target_sequence}_unique_sequences_175_180bp.fasta")
     with open(unique_output_file_175_180bp, "w") as file:
@@ -185,6 +210,11 @@ def process_sequences(input_dir, output_dir, target_sequence):
     print(f"Number of unique sequences between 175 and 180 bp: {count}")
     print(f"Unique sequences between 175 and 180 bp saved in: {unique_output_file_175_180bp}")
 
+    with open(os.path.join(output_dir, f'{target_sequence}_counts.csv'), 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Total_unique_sequences_175_180bp", target_sequence, "", "", "",
+                        count, ""])
+
     # Write non-unique sequences to a multifasta file and count the number of sequences
     non_unique_output_file = os.path.join(output_dir, f"{target_sequence}_non_unique_sequences.fasta")
     with open(non_unique_output_file, "w") as file:
@@ -196,6 +226,10 @@ def process_sequences(input_dir, output_dir, target_sequence):
         print(f"Number of non-unique sequences: {count}")
         print(f"Non-unique sequences saved in: {non_unique_output_file}")
 
+    with open(os.path.join(output_dir, f'{target_sequence}_counts.csv'), 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Total non-unique sequences", target_sequence, "", "", "",
+                        "", count])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process multi-FASTA files to search and reorganize sequences.')

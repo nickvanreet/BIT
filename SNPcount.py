@@ -6,6 +6,11 @@ import os
 
 possible_nucleotides = ['A', 'T', 'C', 'G', 'R', 'Y', 'S', 'W', 'K', 'M', 'B', 'D', 'H', 'V', 'N', '-']
 
+# Set the output directory
+output_dir = "/home/nick/SNPs"
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
 def parse_sequence_file(file_path):
     with open(file_path, "r") as handle:
         sequences = list(SeqIO.parse(handle, "fasta"))
@@ -54,7 +59,7 @@ target_sequence = input("Please enter the target sequence: ")
 
 # Modify the file name to include the target sequence
 input_file = f'{target_sequence}_unique_sequences_175_180bp.fasta'
-output_file = f'{target_sequence}_aligned.fa'
+output_file = os.path.join(output_dir, f'{target_sequence}_aligned.fa')
 
 # Align the sequences
 align_sequences(os.path.join("/home/nick/RECO", input_file), output_file)
@@ -63,10 +68,7 @@ align_sequences(os.path.join("/home/nick/RECO", input_file), output_file)
 sequences = parse_sequence_file(output_file)
 tbg_specific_snps = find_tbg_specific_snps(sequences)
 
-# Set the output directory
-output_dir = "SNPs"
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
+
 
 # Write SNP counts to a file in the output directory
 output_file = os.path.join(output_dir, f'{target_sequence}_SNP_counts.csv')

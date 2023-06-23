@@ -63,5 +63,11 @@ align_sequences(input_file, output_file)
 sequences = parse_sequence_file(output_file)
 tbg_specific_snps = find_tbg_specific_snps(sequences)
 
-# Write SNP counts to a file
-write_to_file(tbg_specific_snps, f'{target_sequence}_SNP_counts.csv')
+# Set the output directory
+output_dir = "SNPs"
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+# Write SNP counts to a file in the output directory
+output_file = os.path.join(output_dir, f'{target_sequence}_SNP_counts.csv')
+write_to_file(tbg_specific_snps, output_file)

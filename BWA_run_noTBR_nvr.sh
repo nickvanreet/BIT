@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --ntasks=1 --cpus-per-task=28
-#SBATCH --time=20:00:00
+#SBATCH --time=1:00:00
 # #SBATCH --job-name=bwa_run
 
 #SBATCH --mail-type=FAIL
@@ -15,14 +15,14 @@
 module load BioTools
 module load BWA
 
-#### bwa index /user/antwerpen/206/vsc20643/scratch/trypanosoma_genomes/data/refgenome/TriTrypDB-54_TbruceiTREU927_Genome_withTBR.fasta
+#### bwa index /scratch/antwerpen/206/vsc20643/trypanosoma_genomes/data/refgenome/TriTrypDB-63_TbruceiTREU927_Genome.fasta
 #### zeker niet in script laten , eeerst in terminal intikken zonder SBATCH
 
 ## set parameters
 # reference_genome=/user/antwerpen/205/vsc20587/scratch/trypanosoma_genomes/data/refgenome/TriTrypDB-63_TbruceiTREU927_Genome.fasta
-reference_genome=/user/antwerpen/206/vsc20643/scratch/trypanosoma_genomes/data/refgenome/TriTrypDB-54_TbruceiTREU927_Genome_withTBR.fasta
-bwa_dir=/user/antwerpen/206/vsc20643/scratch/trypanosoma_genomes/results/bwa/
-fastq_dir=/user/antwerpen/206/vsc20643/scratch/trypanosoma_genomes/results/fastq/
+reference_genome=/scratch/antwerpen/206/vsc20643/trypanosoma_genomes/data/refgenome/TriTrypDB-63_TbruceiTREU927_Genome_withTBR.fasta
+bwa_dir=/scratch/antwerpen/206/vsc20643/trypanosoma_genomes/results/bwa/
+fastq_dir=/scratch/antwerpen/206/vsc20643/trypanosoma_genomes/results/fastq/
 threads=28
 
 
@@ -45,13 +45,13 @@ echo $fastq_file_2
 file_prefix_full=${fastq_file_1%_1.fq.gz}
 file_prefix_full=${file_prefix_full%_1.fastq.gz}
 sample=${file_prefix_full##*/}
-fastq_file_concat=${fastq_dir}/${sample}.fastq.gz
+fastq_file_concat=${fastq_dir}${sample}.fastq.gz
 
 ## do concatenation
 cat ${fastq_file_1} ${fastq_file_2} > ${fastq_file_concat}
 
 ## create the bam_file name
-bam_file_prefix=${bwa_dir}/${sample}
+bam_file_prefix=${bwa_dir}${sample}
 
 echo $fastq_file_1
 echo $fastq_file_2

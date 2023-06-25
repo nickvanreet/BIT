@@ -69,7 +69,6 @@ sequences = parse_sequence_file(output_file)
 tbg_specific_snps = find_tbg_specific_snps(sequences)
 
 
-
 # Write SNP counts to a file in the output directory
 output_file = os.path.join(output_dir, f'{target_sequence}_SNP_counts.csv')
 write_to_file(tbg_specific_snps, output_file)

@@ -6,7 +6,7 @@ import random
 data = defaultdict(lambda: defaultdict(int))
 
 # Parse your fasta file
-for record in SeqIO.parse('short.fasta', 'fasta'):
+for record in SeqIO.parse('GCGCAGTT_unique_sequences_175_180bp.fasta', 'fasta'):
     # Get the unique sequence ID, count, and hits from the line
     fields = record.description.split(' | ')
     unique_id = fields[0][1:]
@@ -34,7 +34,7 @@ labels = sorted(labels)
 colors = ['#%06x' % random.randint(0, 0xFFFFFF) for _ in range(len(labels))]
 
 # Write multibar annotation to output file
-with open('itol_multibar.txt', 'w') as f:
+with open('itol_multibar_subspecies_strains.txt', 'w') as f:
     # Write the header
     f.write('DATASET_MULTIBAR\nSEPARATOR TAB\nDATASET_LABEL\tmy_dataset\n')
     f.write('FIELD_LABELS\t' + '\t'.join(labels) + '\n')

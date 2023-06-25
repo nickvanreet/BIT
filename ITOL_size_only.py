@@ -23,7 +23,7 @@ for record in SeqIO.parse(file_path, 'fasta'):
     
     # Get sequence length
     seq_length = len(record.seq)
-    label = f'Length_{seq_length}bp'
+    label = f'{seq_length}bp'
     data[unique_id][label] += 1
 
 # Define labels and colors for multibar annotation

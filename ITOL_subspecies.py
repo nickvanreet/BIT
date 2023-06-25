@@ -23,18 +23,14 @@ for record in SeqIO.parse(file_path, 'fasta'):
     all_hits = fields[2][6:].split(' & ')
 
     for hit_string in all_hits:
-        hit_parts = hit_string.split('_')
-        subspecies = hit_parts[0]
-        strain = hit_parts[1]
-        clone = "_".join(hit_parts[2:])
-        label = f"{subspecies}_{strain}"
-        data[unique_id][label] += 1
+        subspecies = hit_string.split('_')[0]
+        data[unique_id][subspecies] += 1
 
 # Define labels and colors for multibar annotation
 labels = set()
 colors = []
 
-# Add combined subspecies and strain labels and colors
+# Add subspecies labels and colors
 for unique_hits in data.values():
     for label in unique_hits.keys():
         labels.add(label)
@@ -43,7 +39,7 @@ labels = sorted(labels)
 colors = ['#%06x' % random.randint(0, 0xFFFFFF) for _ in range(len(labels))]
 
 # Write multibar annotation to output file
-with open(os.path.join(os.path.expanduser(output_dir),'itol_multibar_subspecies_strains.txt'), 'w') as f:
+with open(os.path.join(os.path.expanduser(output_dir),'itol_multibar_subspecies.txt'), 'w') as f:
     # Write the header
     f.write('DATASET_MULTIBAR\nSEPARATOR TAB\nDATASET_LABEL\tmy_dataset\n')
     f.write('FIELD_LABELS\t' + '\t'.join(labels) + '\n')

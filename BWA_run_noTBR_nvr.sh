@@ -21,7 +21,7 @@ module load BWA
 ## set parameters
 # reference_genome=/user/antwerpen/205/vsc20587/scratch/trypanosoma_genomes/data/refgenome/TriTrypDB-63_TbruceiTREU927_Genome.fasta
 reference_genome=/scratch/antwerpen/206/vsc20643/trypanosoma_genomes/data/refgenome/TriTrypDB-63_TbruceiTREU927_Genome_withTBR.fasta
-bwa_dir=/scratch/antwerpen/206/vsc20643/trypanosoma_genomes/results/bwa/
+bwa_dir=/scratch/antwerpen/206/vsc20643/trypanosoma_genomes/results/BWA/
 fastq_dir=/scratch/antwerpen/206/vsc20643/trypanosoma_genomes/results/fastq/
 threads=28
 

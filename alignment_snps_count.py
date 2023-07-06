@@ -44,6 +44,6 @@ def write_to_file(tbg_specific_snps, output_file):
     df = df.pivot_table(index=['Position', 'Nucleotide'], columns='Species_Strain', values='Count', fill_value=0)
     df.to_csv(output_file)
 
-sequences = parse_sequence_file('unique_sequences_175_180bp_GCGCAGTT.fa')
+sequences = parse_sequence_file('GCGCAGTT_unique_sequences_175_180bp.fasta')
 tbg_specific_snps = find_tbg_specific_snps(sequences)
 write_to_file(tbg_specific_snps, 'SNP_counts.csv')
